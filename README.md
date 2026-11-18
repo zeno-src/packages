@@ -115,7 +115,7 @@ says.
   walk through the code is
   [docs/registry.md](https://github.com/zeno-src/zeno-lang/blob/main/docs/registry.md)
   in the language's repository, and the reasons for each choice are in
-  chapter 26 of its
+  chapter 27 of its
   [decisions](https://github.com/zeno-src/zeno-lang/blob/main/docs/decisions.md).
 
 ## A registry of your own
