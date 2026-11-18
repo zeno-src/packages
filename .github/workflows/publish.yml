@@ -31,9 +31,10 @@ permissions:
   issues: write
 
 env:
-  # The commit of Zeno that the registry is run with. A release takes
-  # its place when one has `zeno registry accept`.
-  ZENO_COMMIT: ce5760dbaf0a76d47ace09684e8a38d81ebb13cc
+  # The release of Zeno that the registry is run with. To move to a newer
+  # one, change this; the file is checked against the release's own
+  # SHA256SUMS.txt before it is used.
+  ZENO_VERSION: "0.5.2"
 
 jobs:
   publish:
@@ -45,22 +46,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Zeno, kept from the last run
-        id: kept
-        uses: actions/cache@v4
-        with:
-          path: ~/zeno
-          key: zeno-${{ env.ZENO_COMMIT }}
-
-      - name: Zeno, built from its source
-        if: steps.kept.outputs.cache-hit != 'true'
+      - name: Zeno, from its release
         run: |
-          mkdir "$RUNNER_TEMP/zeno-lang" && cd "$RUNNER_TEMP/zeno-lang"
-          git init --quiet
-          git fetch --quiet --depth 1 https://github.com/zeno-src/zeno-lang "$ZENO_COMMIT"
-          git checkout --quiet FETCH_HEAD
-          cargo build --quiet
-          mkdir -p ~/zeno && cp target/debug/zeno ~/zeno/zeno
+          name="zeno-$ZENO_VERSION-linux-x86_64"
+          from="https://github.com/zeno-src/zeno-lang/releases/download/v$ZENO_VERSION"
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --retry 3 --remote-name "$from/$name.tar.gz" --remote-name "$from/SHA256SUMS.txt"
+          grep " $name.tar.gz\$" SHA256SUMS.txt | sha256sum --check --strict
+          tar -xzf "$name.tar.gz"
+          mkdir -p ~/zeno && cp "$name/zeno" ~/zeno/zeno
+          ~/zeno/zeno --version
 
       - name: Read the form, check the package, and answer
         env:
