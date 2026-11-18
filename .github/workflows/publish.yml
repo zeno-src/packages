@@ -1,0 +1,61 @@
+# A filled-in "Publish a package" form is an issue. This reads it, has
+# `zeno registry accept` check the package and write its file, pushes
+# that, and answers on the issue. tools/publish.py is all of it.
+name: publish
+
+on:
+  issues:
+    types: [opened, reopened]
+
+# One at a time: each run pushes to `main`.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  # The commit of Zeno that the registry is run with. A release takes
+  # its place when one has `zeno registry accept`.
+  ZENO_COMMIT: ce5760dbaf0a76d47ace09684e8a38d81ebb13cc
+
+jobs:
+  publish:
+    # Other issues (a question, a request to take a package out) are
+    # for people to answer.
+    if: contains(github.event.issue.body, '### Repository')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zeno, kept from the last run
+        id: kept
+        uses: actions/cache@v4
+        with:
+          path: ~/zeno
+          key: zeno-${{ env.ZENO_COMMIT }}
+
+      - name: Zeno, built from its source
+        if: steps.kept.outputs.cache-hit != 'true'
+        run: |
+          mkdir "$RUNNER_TEMP/zeno-lang" && cd "$RUNNER_TEMP/zeno-lang"
+          git init --quiet
+          git fetch --quiet --depth 1 https://github.com/zeno-src/zeno-lang "$ZENO_COMMIT"
+          git checkout --quiet FETCH_HEAD
+          cargo build --quiet
+          mkdir -p ~/zeno && cp target/debug/zeno ~/zeno/zeno
+
+      - name: Read the form, check the package, and answer
+        env:
+          # What somebody typed reaches the script as text in these
+          # variables, and is never written into a command.
+          ISSUE: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.issue.body }}
+          LOGIN: ${{ github.event.issue.user.login }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ZENO: /home/runner/zeno/zeno
+        run: python3 tools/publish.py

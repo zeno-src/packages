@@ -1,0 +1,26 @@
+name: Publish a package
+description: Ask the registry to take a version of a package. `zeno publish` fills this in for you.
+title: "Publish "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `zeno publish` in the folder of your package first. It checks the package and gives you the address of this form with both boxes filled in.
+
+        When you press the button, the registry fetches the repository at that version, checks it, and answers here, most often within a few minutes. You must be signed in as the account that owns the repository, or as a public member of the organization that owns it.
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      description: The address of the package's git repository on GitHub. Its `zeno.package` is at the top.
+      placeholder: https://github.com/someone/zeno-units
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "A tag of that repository: the letter v and three numbers."
+      placeholder: v1.0.0
+    validations:
+      required: true

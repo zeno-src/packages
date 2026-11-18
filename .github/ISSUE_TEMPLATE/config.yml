@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How the registry works
+    url: https://github.com/zeno-src/zeno-lang/blob/main/docs/registry.md
+    about: Needing a package by its name, publishing one, and what the registry checks.
+  - name: Browse the packages
+    url: https://zeno-lang.org/packages/
+    about: Every package in the registry, with a box to search them.

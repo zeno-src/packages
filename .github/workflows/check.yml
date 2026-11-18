@@ -1,0 +1,15 @@
+# The script that reads the form has tests of its own.
+name: check
+
+on:
+  push:
+    paths: ["tools/**", ".github/workflows/check.yml"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover --start-directory tools --pattern "test_*.py" --verbose
