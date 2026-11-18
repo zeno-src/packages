@@ -107,6 +107,9 @@ says.
   when the form is sent, and starts
   [`tools/publish.py`](tools/publish.py), which reads the form, checks
   who sent it, and runs `zeno registry accept`.
+- A keeper of the registry can start the same workflow by hand
+  (Actions, publish, "Run workflow"), for a package whose owner cannot
+  use the form.
 - `zeno registry accept` is part of Zeno itself. It fetches the
   repository at the tag, checks the package and writes its file. The
   walk through the code is

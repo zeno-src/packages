@@ -6,6 +6,20 @@ name: publish
 on:
   issues:
     types: [opened, reopened]
+  # A keeper of the registry can start it by hand, for a package whose
+  # owner cannot use the form. Only somebody who may write to this
+  # repository can, and they stand for who the owner is.
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Repository: the address of the package on GitHub"
+        required: true
+      version:
+        description: "Version: a tag of it, such as v1.0.0"
+        required: true
+      owner:
+        description: "Owner: the GitHub account that publishes this package"
+        required: true
 
 # One at a time: each run pushes to `main`.
 concurrency:
@@ -25,7 +39,7 @@ jobs:
   publish:
     # Other issues (a question, a request to take a package out) are
     # for people to answer.
-    if: contains(github.event.issue.body, '### Repository')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.issue.body, '### Repository')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -55,6 +69,9 @@ jobs:
           ISSUE: ${{ github.event.issue.number }}
           BODY: ${{ github.event.issue.body }}
           LOGIN: ${{ github.event.issue.user.login }}
+          REPOSITORY: ${{ inputs.repository }}
+          VERSION: ${{ inputs.version }}
+          OWNER: ${{ inputs.owner }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           ZENO: /home/runner/zeno/zeno

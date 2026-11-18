@@ -25,6 +25,11 @@ in the variables ISSUE, BODY and LOGIN. Everything in BODY was typed by a
 stranger: it is matched against two exact patterns here before any of it
 goes near a command, and it only ever travels as one argument, never as
 part of a command line that a shell reads.
+
+A keeper of the registry can also start the workflow by hand, for a
+package whose owner cannot use the form. Then there is no issue: the
+answers come in REPOSITORY, VERSION and OWNER, the keeper stands for who
+the owner is, and what would have been said on the issue is printed.
 """
 
 import os
@@ -39,6 +44,8 @@ REPOSITORY = re.compile(r"https://github\.com/([A-Za-z0-9][A-Za-z0-9-]{0,38})/([
 # A version: the letter v and three numbers, each with no zero in front.
 NUMBER = r"(?:0|[1-9][0-9]{0,8})"
 VERSION = re.compile(rf"v{NUMBER}\.{NUMBER}\.{NUMBER}")
+# A GitHub account.
+ACCOUNT = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")
 
 DOCS = "https://github.com/zeno-src/zeno-lang/blob/main/docs/registry.md"
 
@@ -110,15 +117,31 @@ def shown(text):
 def answer(issue, text, done):
     """Say `text` on the issue and close it: as done, or as not done.
     Somebody whose package was refused mends it and opens the issue
-    again, which starts this script again."""
+    again, which starts this script again.
+
+    With no issue, the workflow was started by hand: the text is
+    printed, and the run fails if the package was not taken."""
+    if not issue:
+        print(text)
+        return 0 if done else 1
     subprocess.run(["gh", "issue", "comment", issue, "--body-file", "-"], input=text, text=True, check=True)
     reason = "completed" if done else "not planned"
     subprocess.run(["gh", "issue", "close", issue, "--reason", reason], check=True)
+    return 0
 
 
 def main():
-    issue, body, login = os.environ["ISSUE"], os.environ["BODY"], os.environ["LOGIN"]
+    issue = os.environ.get("ISSUE", "")
     zeno = os.environ.get("ZENO", "zeno")
+    if issue:
+        body, login = os.environ["BODY"], os.environ["LOGIN"]
+    else:
+        # Started by hand: the three answers, made into the text of a form
+        # so that they are read, and refused, by the same lines.
+        body = f"### Repository\n\n{os.environ['REPOSITORY']}\n\n### Version\n\n{os.environ['VERSION']}\n"
+        login = os.environ["OWNER"].strip()
+        if not ACCOUNT.fullmatch(login):
+            return answer(issue, "What stands under Owner is not the name of a GitHub account.", done=False)
     again = (
         "\n\nWhen that is put right, open this issue again with the button below (edit the form first, if it is "
         f"the form that was wrong), and the registry looks again. How publishing works: {DOCS}"
@@ -129,7 +152,7 @@ def main():
         return answer(issue, wrong + again, done=False)
     repository, owner, version = asked["repository"], asked["owner"], asked["version"]
 
-    if not may_publish(login, owner, is_public_member):
+    if issue and not may_publish(login, owner, is_public_member):
         return answer(
             issue,
             f"This form was filled in by the account `{login}`, and the repository belongs to `{owner}`. "
@@ -150,12 +173,12 @@ def main():
     name = said.split()[1]
     git = ["git", "-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com"]
     subprocess.run(["git", "add", "index", "index.json"], check=True)
-    subprocess.run(git + ["commit", "--quiet", "-m", f"{name} {version} (#{issue})"], check=True)
+    subprocess.run(git + ["commit", "--quiet", "-m", f"{name} {version} (#{issue})" if issue else f"{name} {version}"], check=True)
     # Somebody may have changed the registry by hand since this run began.
     subprocess.run(git + ["pull", "--quiet", "--rebase", "origin", "main"], check=True)
     subprocess.run(["git", "push", "--quiet", "origin", "HEAD:main"], check=True)
 
-    answer(
+    return answer(
         issue,
         f"**`{name}` {version} is in the registry.**\n\n"
         f"A program gets it with this line in its `zeno.package`, and `zeno fetch`:\n\n"
